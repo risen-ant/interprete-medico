@@ -1,0 +1,255 @@
+# app.py — interfaz visual mejorada con login de usuario (sin contraseña) y almacenamiento por alias
+
+import streamlit as st
+from PIL import Image
+import pytesseract
+from datetime import datetime
+from fpdf import FPDF
+import os
+import platform
+import json
+
+from utils_ai_API import explicar_informe
+
+# Directorio local para almacenar datos por usuario
+DATA_DIR = "usuarios_datos"
+os.makedirs(DATA_DIR, exist_ok=True)
+
+if platform.system() == "Windows":
+    pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+
+st.set_page_config(
+    page_title="Intérprete Médico Automático",
+    page_icon="🧬",
+    layout="wide"
+)
+
+# Pantalla de login
+if "usuario" not in st.session_state:
+    st.session_state.usuario = None
+
+if st.session_state.usuario is None:
+    st.title("👤 Iniciar sesión")
+    st.markdown("Introduce tu nombre o alias para comenzar")
+    alias = st.text_input("Nombre de usuario")
+    if st.button("Entrar") and alias.strip():
+        st.session_state.usuario = alias.strip()
+        # Cargar datos si existen
+        ruta_usuario = os.path.join(DATA_DIR, f"{alias.strip()}.json")
+        if os.path.exists(ruta_usuario):
+            with open(ruta_usuario, "r", encoding="utf-8") as f:
+                datos = json.load(f)
+                st.session_state.perfil = datos.get("perfil", None)
+                st.session_state.historial = datos.get("historial", [])
+        st.rerun()
+    st.stop()
+
+# Guardar datos del usuario actual en archivo
+def guardar_datos_usuario():
+    if st.session_state.usuario:
+        ruta = os.path.join(DATA_DIR, f"{st.session_state.usuario}.json")
+        datos = {
+            "perfil": st.session_state.get("perfil", None),
+            "historial": st.session_state.get("historial", [])
+        }
+        with open(ruta, "w", encoding="utf-8") as f:
+            json.dump(datos, f, ensure_ascii=False, indent=2)
+
+# Estilo visual original
+st.markdown("""
+    <style>
+        body {
+            background-color: #f0f8ff;
+        }
+        .block-container {
+            background-color: #f0f8ff;
+            padding: 2rem;
+            border-radius: 8px;
+        }
+        .stButton>button {
+            transition: all 0.3s ease;
+        }
+        .stButton>button:hover {
+            transform: scale(1.03);
+            background-color: #dbeeff;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Pantalla de bienvenida
+if "aceptado" not in st.session_state:
+    st.session_state.aceptado = False
+
+if not st.session_state.aceptado:
+    st.image("logo_upv.png", width=120)
+    st.title(f"Bienvenido, {st.session_state.usuario}")
+    st.markdown("""
+    Esta herramienta permite interpretar informes médicos de forma simplificada, según tu perfil.  
+    ⚠️ **Importante:** Este es un prototipo con fines educativos.  
+    **No reemplaza la consulta con profesionales sanitarios.**
+    """)
+    if st.button("Aceptar y comenzar"):
+        st.session_state.aceptado = True
+        st.rerun()
+    st.stop()
+
+# Inicialización de estado
+if "perfil" not in st.session_state:
+    st.session_state.perfil = None
+if "respuesta_generada" not in st.session_state:
+    st.session_state.respuesta_generada = ""
+if "historial" not in st.session_state:
+    st.session_state.historial = []
+
+# Encabezado visual
+col_logo, col_title = st.columns([1, 5])
+with col_logo:
+    if os.path.exists("logo_upv.png"):
+        st.image("logo_upv.png", width=100)
+with col_title:
+    st.title("Intérprete automático de informes médicos")
+    st.caption(f"Usuario: {st.session_state.usuario} • Prototipo educativo desarrollado con Streamlit")
+
+# Instrucciones laterales
+st.sidebar.header("🛍 Instrucciones")
+st.sidebar.markdown("""
+1. Rellena tu perfil de usuario.  
+2. Sube una imagen o archivo de texto.  
+3. Genera una explicación personalizada.  
+4. Exporta a PDF si lo deseas.
+""")
+st.sidebar.markdown("---")
+st.sidebar.info("Este prototipo no sustituye la opinión de un profesional sanitario.")
+
+# Botón para cerrar sesión
+if st.sidebar.button("🔓 Cerrar sesión"):
+    for k in list(st.session_state.keys()):
+        del st.session_state[k]
+    st.rerun()
+
+if st.session_state.perfil:
+    with st.sidebar.expander("👤 Perfil del usuario", expanded=True):
+        for k, v in st.session_state.perfil.items():
+            st.markdown(f"**{k.capitalize()}**: {v}")
+
+# Paso 1: Perfil
+st.subheader("1️⃣ Define tu perfil")
+with st.form("perfil_usuario"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        edad = st.radio("Edad", ["<18", "18–29", "30–64", "≥65"])
+    with col2:
+        estudios = st.selectbox("Estudios", ["Básicos", "Medios", "Universitarios no sanitarios", "Estudios/experiencia sanitaria"])
+    with col3:
+        detalle = st.radio("Nivel de detalle", ["Muy simple", "Intermedio", "Técnico"])
+    objetivo = st.selectbox("Objetivo principal", ["Entender mi salud", "Preparar visita médica", "Presentar en trabajo/seguro", "Uso legal (baja, juicio)"])
+    comorbilidades = st.multiselect(
+        "Condiciones médicas",
+        [
+            "Hipertensión",
+            "Diabetes",
+            "Colesterol alto",
+            "Enfermedad cardiaca",
+            "Obesidad",
+            "Tabaquismo",
+            "Asma",
+            "Insuficiencia renal"
+        ]
+    )
+
+    if st.form_submit_button("Guardar perfil"):
+        st.session_state.perfil = {
+            "edad": edad,
+            "estudios": estudios,
+            "objetivo": objetivo,
+            "comorbilidades": comorbilidades,
+            "detalle": detalle
+        }
+        guardar_datos_usuario()
+        st.success("Perfil guardado correctamente ✅")
+
+# Paso 2: Subida del informe
+st.divider()
+st.subheader("2️⃣ Sube tu informe (imagen o texto)")
+archivo = st.file_uploader("Selecciona un archivo (.png, .jpg, .jpeg, .txt)", type=["png", "jpg", "jpeg", "txt"])
+texto_extraido = ""
+
+if archivo:
+    col1, col2 = st.columns([1, 2])
+    if archivo.type.startswith("image"):
+        imagen = Image.open(archivo)
+        with col1:
+            st.image(imagen, caption="Imagen subida", use_container_width=True)
+        with st.spinner("🔍 Extrayendo texto con OCR..."):
+            texto_extraido = pytesseract.image_to_string(imagen)
+    elif archivo.type == "text/plain":
+        texto_extraido = archivo.read().decode("utf-8")
+        with col1:
+            st.success("📄 Archivo de texto cargado correctamente.")
+
+    with col2:
+        st.subheader("📝 Texto extraído:")
+        texto_extraido = st.text_area("Resultado OCR / Texto leído:", value=texto_extraido, height=300)
+
+# Paso 3: Interpretación personalizada
+st.divider()
+st.subheader("3️⃣ Interpretación personalizada")
+
+if texto_extraido and st.session_state.perfil:
+    if st.button("🤖 Generar explicación con IA"):
+        with st.spinner("Generando explicación adaptada..."):
+            try:
+                respuesta = explicar_informe(texto_extraido, st.session_state.perfil)
+                st.session_state.respuesta_generada = respuesta
+                st.success("✅ Interpretación generada")
+                st.write(respuesta)
+                st.session_state.historial.append({
+                    "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": texto_extraido,
+                    "resultado": respuesta
+                })
+                guardar_datos_usuario()
+            except Exception as e:
+                st.error(f"❌ Error al generar la interpretación: {e}")
+
+# Historial de informes
+if st.session_state.historial:
+    st.markdown("### 📜 Historial de informes")
+
+    for i, item in enumerate(st.session_state.historial[::-1], 1):
+        with st.expander(f"📄 Informe #{i} – {item['fecha']}"):
+            st.markdown("**📝 Texto original del informe:**", unsafe_allow_html=True)
+            st.code(item["texto"], language="text")
+            st.markdown("**✅ Resultado generado:**", unsafe_allow_html=True)
+            st.write(item["resultado"])
+
+    if st.button("🗑️ Borrar historial"):
+        st.session_state.historial = []
+        guardar_datos_usuario()
+        st.success("Historial eliminado.")
+        st.rerun()
+
+# Exportación a PDF sin gráfico
+if st.session_state.respuesta_generada:
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, f"Informe generado el {datetime.now().strftime('%d/%m/%Y')}\n")
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, "Resultado personalizado:", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, st.session_state.respuesta_generada.encode('latin-1', 'replace').decode('latin-1'))
+
+    nombre = "informe_personalizado.pdf"
+    pdf.output(nombre)
+
+    with open(nombre, "rb") as f:
+        st.download_button("📄 Descargar como PDF", data=f, file_name=nombre, mime="application/pdf")
+
+# Reinicio de app
+st.divider()
+if st.button("🔄 Nuevo análisis"):
+    st.session_state.perfil = None
+    st.session_state.respuesta_generada = ""
+    guardar_datos_usuario()
+    st.rerun()
