@@ -1,4 +1,4 @@
-# app.py — interfaz visual con EasyOCR
+# app.py — interfaz visual con EasyOCR 
 
 import streamlit as st
 from PIL import Image
@@ -207,6 +207,7 @@ if st.button("🔄 Nuevo análisis"):
     st.session_state.respuesta_generada = ""
     st.session_state.texto_extraido = ""
     guardar_datos_usuario()
-    st.rerun()
+    st.experimental_rerun()
+
 
 
