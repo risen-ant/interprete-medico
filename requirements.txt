@@ -5,3 +5,5 @@ Pillow
 openai
 fpdf
 gTTS
+torch
+opencv-python-headless
