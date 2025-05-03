@@ -167,16 +167,20 @@ if st.session_state.texto_extraido and st.session_state.perfil:
                 respuesta = explicar_informe(st.session_state.texto_extraido, st.session_state.perfil)
                 st.session_state.respuesta_generada = respuesta
                 st.success("✅ Interpretación generada")
-                st.write(respuesta)
-
-                st.subheader("🔊 Escuchar explicación")
-                idioma = st.selectbox("Selecciona el idioma", ["es", "en"], index=0, key="idioma_audio")
-                if st.button("🎧 Escuchar explicación"):
-                    audio_bytes = generar_audio(st.session_state.respuesta_generada, lang=idioma)
-                    st.audio(audio_bytes, format="audio/mp3")
-
             except Exception as e:
                 st.error(f"❌ Error al generar la interpretación: {e}")
+
+if st.session_state.respuesta_generada:
+    st.write(st.session_state.respuesta_generada)
+
+    # 🎧 Reproducir audio si hay explicación generada
+    st.subheader("🔊 Escuchar explicación")
+    idioma = st.selectbox("Selecciona el idioma", ["es", "en"], index=0, key="idioma_audio")
+    if st.button("🎧 Escuchar explicación"):
+        audio_bytes = generar_audio(st.session_state.respuesta_generada, lang=idioma)
+        st.audio(audio_bytes, format="audio/mp3")
+
+
 
 if st.session_state.historial:
     st.markdown("### 📜 Historial de informes")
