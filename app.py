@@ -175,10 +175,10 @@ if st.session_state.respuesta_generada:
 
     # 🎧 Reproducir audio si hay explicación generada
     st.subheader("🔊 Escuchar explicación")
-    idioma = st.selectbox("Selecciona el idioma", ["es", "en"], index=0, key="idioma_audio")
     if st.button("🎧 Escuchar explicación"):
-        audio_bytes = generar_audio(st.session_state.respuesta_generada, lang=idioma)
+        audio_bytes = generar_audio(st.session_state.respuesta_generada, lang="es")
         st.audio(audio_bytes, format="audio/mp3")
+
 
 
 
