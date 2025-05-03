@@ -1,4 +1,4 @@
-# app.py — interfaz visual con EasyOCR + Audio con gTTS
+# app.py — interfaz visual con EasyOCR + audio con gTTS
 
 import streamlit as st
 from PIL import Image
@@ -84,7 +84,7 @@ with col_title:
     st.title("Intérprete automático de informes médicos")
     st.caption(f"Usuario: {st.session_state.usuario} • Prototipo educativo desarrollado con Streamlit")
 
-st.sidebar.header("🛍 Instrucciones")
+st.sidebar.header("💼 Instrucciones")
 st.sidebar.markdown("""
 1. Rellena tu perfil de usuario.  
 2. Sube una imagen o archivo de texto.  
@@ -104,7 +104,7 @@ if st.session_state.perfil:
         for k, v in st.session_state.perfil.items():
             st.markdown(f"**{k.capitalize()}**: {v}")
 
-st.subheader("1️⃣ Define tu perfil")
+st.subheader("1⃣️ Define tu perfil")
 with st.form("perfil_usuario"):
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -128,7 +128,7 @@ with st.form("perfil_usuario"):
         st.success("Perfil guardado correctamente ✅")
 
 st.divider()
-st.subheader("2️⃣ Sube tu informe (imagen o texto)")
+st.subheader("2⃣️ Sube tu informe (imagen o texto)")
 archivos = st.file_uploader(
     "Selecciona uno o varios archivos (.png, .jpg, .jpeg, .txt)",
     type=["png", "jpg", "jpeg", "txt"],
@@ -159,11 +159,11 @@ if archivos:
     st.session_state.texto_extraido = texto_total.strip()
 
     with col2:
-        st.subheader("📝 Texto combinado extraído:")
+        st.subheader("📜 Texto combinado extraído:")
         st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=400)
 
 st.divider()
-st.subheader("3️⃣ Interpretación personalizada")
+st.subheader("3⃣️ Interpretación personalizada")
 
 if st.session_state.texto_extraido and st.session_state.perfil:
     if st.button("🤖 Generar explicación con IA"):
@@ -172,26 +172,33 @@ if st.session_state.texto_extraido and st.session_state.perfil:
                 respuesta = explicar_informe(st.session_state.texto_extraido, st.session_state.perfil)
                 st.session_state.respuesta_generada = respuesta
                 st.success("✅ Interpretación generada")
+
+                # 🔄 Añadir al historial
+                nuevo_registro = {
+                    "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": st.session_state.texto_extraido,
+                    "resultado": st.session_state.respuesta_generada
+                }
+                st.session_state.historial.append(nuevo_registro)
+                guardar_datos_usuario()
+
             except Exception as e:
                 st.error(f"❌ Error al generar la interpretación: {e}")
 
 if st.session_state.respuesta_generada:
     st.write(st.session_state.respuesta_generada)
 
-    # 🎧 Reproducir audio si hay explicación generada
+    # 🎷 Reproducir audio si hay explicación generada
     st.subheader("🔊 Escuchar explicación")
-    if st.button("🎧 Escuchar explicación"):
+    if st.button("🎷 Escuchar explicación"):
         audio_bytes = generar_audio(st.session_state.respuesta_generada, lang="es")
         st.audio(audio_bytes, format="audio/mp3")
-
-
-
 
 if st.session_state.historial:
     st.markdown("### 📜 Historial de informes")
     for i, item in enumerate(st.session_state.historial[::-1], 1):
         with st.expander(f"📄 Informe #{i} – {item['fecha']}"):
-            st.markdown("**📝 Texto original del informe:**", unsafe_allow_html=True)
+            st.markdown("**📜 Texto original del informe:**", unsafe_allow_html=True)
             st.code(item["texto"], language="text")
             st.markdown("**✅ Resultado generado:**", unsafe_allow_html=True)
             st.write(item["resultado"])
@@ -223,8 +230,8 @@ if st.button("🔄 Nuevo análisis"):
     for key in ["texto_extraido", "respuesta_generada", "audio_bytes"]:
         if key in st.session_state:
             del st.session_state[key]
-    # Resetear la clave del uploader para forzar a que el usuario vuelva a subir archivos
     st.session_state["upload_key"] = str(datetime.now())
+
 
 
 
