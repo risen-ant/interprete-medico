@@ -1,4 +1,4 @@
-# app.py — interfaz visual con EasyOCR + audio con gTTS
+# app.py — interfaz visual con EasyOCR + Audio con gTTS
 
 import streamlit as st
 from PIL import Image
@@ -172,17 +172,15 @@ if st.session_state.texto_extraido and st.session_state.perfil:
                 st.subheader("🔊 Escuchar explicación")
                 idioma = st.selectbox("Selecciona el idioma", ["es", "en"], index=0, key="idioma_audio")
                 if st.button("🎧 Escuchar explicación"):
-                    audio_bytes = generar_audio(st.session_state.respuesta_generada, lang=idioma)
-                    st.audio(audio_bytes, format="audio/mp3")
+                    st.session_state.audio_bytes = generar_audio(st.session_state.respuesta_generada, lang=idioma)
 
-                st.session_state.historial.append({
-                    "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "texto": st.session_state.texto_extraido,
-                    "resultado": respuesta
-                })
-                guardar_datos_usuario()
             except Exception as e:
                 st.error(f"❌ Error al generar la interpretación: {e}")
+
+if st.session_state.respuesta_generada:
+    st.subheader("🔊 Escuchar explicación")
+    if "audio_bytes" in st.session_state:
+        st.audio(st.session_state.audio_bytes, format="audio/mp3")
 
 if st.session_state.historial:
     st.markdown("### 📜 Historial de informes")
@@ -219,6 +217,7 @@ st.divider()
 if st.button("🔄 Nuevo análisis"):
     st.session_state.texto_extraido = ""
     st.rerun()
+
 
 
 
