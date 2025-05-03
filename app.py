@@ -214,11 +214,10 @@ if st.session_state.respuesta_generada:
 
 st.divider()
 if st.button("🔄 Nuevo análisis"):
-    st.session_state.perfil = None
-    st.session_state.respuesta_generada = ""
     st.session_state.texto_extraido = ""
+    st.session_state.respuesta_generada = ""
     guardar_datos_usuario()
-    st.experimental_rerun()
+    st.rerun()
 
 
 
