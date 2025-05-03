@@ -1,4 +1,4 @@
-# app.py — interfaz visual con EasyOCR
+# app.py — interfaz visual con EasyOCR + Audio con gTTS
 
 import streamlit as st
 from PIL import Image
@@ -11,6 +11,7 @@ import platform
 import json
 
 from utils_ai_API import explicar_informe
+from reproducir_audio import generar_audio  # Importación añadida
 
 DATA_DIR = "usuarios_datos"
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -129,37 +130,26 @@ with st.form("perfil_usuario"):
 
 st.divider()
 st.subheader("2️⃣ Sube tu informe (imagen o texto)")
-archivos = st.file_uploader(
-    "Selecciona uno o varios archivos (.png, .jpg, .jpeg, .txt)",
-    type=["png", "jpg", "jpeg", "txt"],
-    accept_multiple_files=True
-)
+archivo = st.file_uploader("Selecciona un archivo (.png, .jpg, .jpeg, .txt)", type=["png", "jpg", "jpeg", "txt"])
 
-if archivos:
-    texto_total = ""
+if archivo:
     col1, col2 = st.columns([1, 2])
-
-    for archivo in archivos:
-        if archivo.type.startswith("image"):
-            imagen = Image.open(archivo)
-            with col1:
-                st.image(imagen, caption=f"🖼 Imagen: {archivo.name}", use_container_width=True)
-            with st.spinner(f"🔍 Extrayendo texto de {archivo.name}..."):
-                reader = easyocr.Reader(["es"], gpu=False)
-                resultado = reader.readtext(np.array(imagen), detail=0)
-                texto = "\n".join(resultado)
-                texto_total += f"\n\n--- Texto extraído de {archivo.name} ---\n{texto}"
-        elif archivo.type == "text/plain":
-            texto = archivo.read().decode("utf-8")
-            texto_total += f"\n\n--- Contenido de {archivo.name} ---\n{texto}"
-            with col1:
-                st.success(f"📄 Archivo de texto cargado: {archivo.name}")
-
-    st.session_state.texto_extraido = texto_total.strip()
+    if archivo.type.startswith("image"):
+        imagen = Image.open(archivo)
+        with col1:
+            st.image(imagen, caption="Imagen subida", use_container_width=True)
+        with st.spinner("🔍 Extrayendo texto con EasyOCR..."):
+            reader = easyocr.Reader(["es"], gpu=False)
+            resultado = reader.readtext(np.array(imagen), detail=0)
+            st.session_state.texto_extraido = "\n".join(resultado)
+    elif archivo.type == "text/plain":
+        st.session_state.texto_extraido = archivo.read().decode("utf-8")
+        with col1:
+            st.success("📄 Archivo de texto cargado correctamente.")
 
     with col2:
-        st.subheader("📝 Texto combinado extraído:")
-        st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=400)
+        st.subheader("📝 Texto extraído:")
+        st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=300)
 
 st.divider()
 st.subheader("3️⃣ Interpretación personalizada")
@@ -172,6 +162,14 @@ if st.session_state.texto_extraido and st.session_state.perfil:
                 st.session_state.respuesta_generada = respuesta
                 st.success("✅ Interpretación generada")
                 st.write(respuesta)
+
+                # 🔊 Bloque de audio añadido
+                st.subheader("🔊 Escuchar explicación")
+                idioma = st.selectbox("Selecciona el idioma", ["es", "en"], index=0, key="idioma_audio")
+                if st.button("🎧 Escuchar explicación"):
+                    audio_bytes = generar_audio(st.session_state.respuesta_generada, lang=idioma)
+                    st.audio(audio_bytes, format="audio/mp3")
+
                 st.session_state.historial.append({
                     "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
                     "texto": st.session_state.texto_extraido,
@@ -215,9 +213,8 @@ if st.session_state.respuesta_generada:
 st.divider()
 if st.button("🔄 Nuevo análisis"):
     st.session_state.texto_extraido = ""
-    st.session_state.respuesta_generada = ""
-    guardar_datos_usuario()
     st.rerun()
+
 
 
 
