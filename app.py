@@ -129,7 +129,12 @@ with st.form("perfil_usuario"):
 
 st.divider()
 st.subheader("2️⃣ Sube tu informe (imagen o texto)")
-archivos = st.file_uploader("Selecciona uno o varios archivos (.png, .jpg, .jpeg, .txt)", type=["png", "jpg", "jpeg", "txt"], accept_multiple_files=True)
+archivos = st.file_uploader(
+    "Selecciona uno o varios archivos (.png, .jpg, .jpeg, .txt)",
+    type=["png", "jpg", "jpeg", "txt"],
+    accept_multiple_files=True,
+    key=st.session_state.get("upload_key", "default_uploader")
+)
 
 if archivos:
     texto_total = ""
@@ -215,8 +220,12 @@ if st.session_state.respuesta_generada:
 
 st.divider()
 if st.button("🔄 Nuevo análisis"):
-    st.session_state.texto_extraido = ""
-    st.rerun()
+    for key in ["texto_extraido", "respuesta_generada", "audio_bytes"]:
+        if key in st.session_state:
+            del st.session_state[key]
+    # Resetear la clave del uploader para forzar a que el usuario vuelva a subir archivos
+    st.session_state["upload_key"] = str(datetime.now())
+
 
 
 
