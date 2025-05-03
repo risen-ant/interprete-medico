@@ -4,4 +4,4 @@ numpy
 Pillow
 openai
 fpdf
-pytts3x
+pyttsx3
