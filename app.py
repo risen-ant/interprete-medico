@@ -12,27 +12,18 @@ import json
 
 from utils_ai_API import explicar_informe
 
-# Directorio local para almacenar datos por usuario
 DATA_DIR = "usuarios_datos"
 os.makedirs(DATA_DIR, exist_ok=True)
 
-st.set_page_config(
-    page_title="Intérprete Médico Automático",
-    page_icon="🧬",
-    layout="wide"
-)
+st.set_page_config(page_title="Intérprete Médico Automático", page_icon="🧬", layout="wide")
 
-# Pantalla de login
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
-
 if st.session_state.usuario is None:
     st.title("👤 Iniciar sesión")
-    st.markdown("Introduce tu nombre o alias para comenzar")
     alias = st.text_input("Nombre de usuario")
     if st.button("Entrar") and alias.strip():
         st.session_state.usuario = alias.strip()
-        # Cargar datos si existen
         ruta_usuario = os.path.join(DATA_DIR, f"{alias.strip()}.json")
         if os.path.exists(ruta_usuario):
             with open(ruta_usuario, "r", encoding="utf-8") as f:
@@ -42,7 +33,6 @@ if st.session_state.usuario is None:
         st.rerun()
     st.stop()
 
-# Guardar datos del usuario actual en archivo
 def guardar_datos_usuario():
     if st.session_state.usuario:
         ruta = os.path.join(DATA_DIR, f"{st.session_state.usuario}.json")
@@ -53,31 +43,17 @@ def guardar_datos_usuario():
         with open(ruta, "w", encoding="utf-8") as f:
             json.dump(datos, f, ensure_ascii=False, indent=2)
 
-# Estilo visual original
 st.markdown("""
     <style>
-        body {
-            background-color: #f0f8ff;
-        }
-        .block-container {
-            background-color: #f0f8ff;
-            padding: 2rem;
-            border-radius: 8px;
-        }
-        .stButton>button {
-            transition: all 0.3s ease;
-        }
-        .stButton>button:hover {
-            transform: scale(1.03);
-            background-color: #dbeeff;
-        }
+        body { background-color: #f0f8ff; }
+        .block-container { background-color: #f0f8ff; padding: 2rem; border-radius: 8px; }
+        .stButton>button { transition: all 0.3s ease; }
+        .stButton>button:hover { transform: scale(1.03); background-color: #dbeeff; }
     </style>
 """, unsafe_allow_html=True)
 
-# Pantalla de bienvenida
 if "aceptado" not in st.session_state:
     st.session_state.aceptado = False
-
 if not st.session_state.aceptado:
     st.image("logo_upv.png", width=120)
     st.title(f"Bienvenido, {st.session_state.usuario}")
@@ -91,15 +67,15 @@ if not st.session_state.aceptado:
         st.rerun()
     st.stop()
 
-# Inicialización de estado
 if "perfil" not in st.session_state:
     st.session_state.perfil = None
 if "respuesta_generada" not in st.session_state:
     st.session_state.respuesta_generada = ""
 if "historial" not in st.session_state:
     st.session_state.historial = []
+if "texto_extraido" not in st.session_state:
+    st.session_state.texto_extraido = ""
 
-# Encabezado visual
 col_logo, col_title = st.columns([1, 5])
 with col_logo:
     if os.path.exists("logo_upv.png"):
@@ -108,7 +84,6 @@ with col_title:
     st.title("Intérprete automático de informes médicos")
     st.caption(f"Usuario: {st.session_state.usuario} • Prototipo educativo desarrollado con Streamlit")
 
-# Instrucciones laterales
 st.sidebar.header("🛍 Instrucciones")
 st.sidebar.markdown("""
 1. Rellena tu perfil de usuario.  
@@ -119,7 +94,6 @@ st.sidebar.markdown("""
 st.sidebar.markdown("---")
 st.sidebar.info("Este prototipo no sustituye la opinión de un profesional sanitario.")
 
-# Botón para cerrar sesión
 if st.sidebar.button("🔓 Cerrar sesión"):
     for k in list(st.session_state.keys()):
         del st.session_state[k]
@@ -130,7 +104,6 @@ if st.session_state.perfil:
         for k, v in st.session_state.perfil.items():
             st.markdown(f"**{k.capitalize()}**: {v}")
 
-# Paso 1: Perfil
 st.subheader("1️⃣ Define tu perfil")
 with st.form("perfil_usuario"):
     col1, col2, col3 = st.columns(3)
@@ -141,19 +114,7 @@ with st.form("perfil_usuario"):
     with col3:
         detalle = st.radio("Nivel de detalle", ["Muy simple", "Intermedio", "Técnico"])
     objetivo = st.selectbox("Objetivo principal", ["Entender mi salud", "Preparar visita médica", "Presentar en trabajo/seguro", "Uso legal (baja, juicio)"])
-    comorbilidades = st.multiselect(
-        "Condiciones médicas",
-        [
-            "Hipertensión",
-            "Diabetes",
-            "Colesterol alto",
-            "Enfermedad cardiaca",
-            "Obesidad",
-            "Tabaquismo",
-            "Asma",
-            "Insuficiencia renal"
-        ]
-    )
+    comorbilidades = st.multiselect("Condiciones médicas", ["Hipertensión", "Diabetes", "Colesterol alto", "Enfermedad cardiaca", "Obesidad", "Tabaquismo", "Asma", "Insuficiencia renal"])
 
     if st.form_submit_button("Guardar perfil"):
         st.session_state.perfil = {
@@ -166,11 +127,9 @@ with st.form("perfil_usuario"):
         guardar_datos_usuario()
         st.success("Perfil guardado correctamente ✅")
 
-# Paso 2: Subida del informe
 st.divider()
 st.subheader("2️⃣ Sube tu informe (imagen o texto)")
 archivo = st.file_uploader("Selecciona un archivo (.png, .jpg, .jpeg, .txt)", type=["png", "jpg", "jpeg", "txt"])
-texto_extraido = ""
 
 if archivo:
     col1, col2 = st.columns([1, 2])
@@ -181,41 +140,38 @@ if archivo:
         with st.spinner("🔍 Extrayendo texto con EasyOCR..."):
             reader = easyocr.Reader(["es"], gpu=False)
             resultado = reader.readtext(np.array(imagen), detail=0)
-            texto_extraido = "\n".join(resultado)
+            st.session_state.texto_extraido = "\n".join(resultado)
     elif archivo.type == "text/plain":
-        texto_extraido = archivo.read().decode("utf-8")
+        st.session_state.texto_extraido = archivo.read().decode("utf-8")
         with col1:
             st.success("📄 Archivo de texto cargado correctamente.")
 
     with col2:
         st.subheader("📝 Texto extraído:")
-        texto_extraido = st.text_area("Resultado OCR / Texto leído:", value=texto_extraido, height=300)
+        st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=300)
 
-# Paso 3: Interpretación personalizada
 st.divider()
 st.subheader("3️⃣ Interpretación personalizada")
 
-if texto_extraido and st.session_state.perfil:
+if st.session_state.texto_extraido and st.session_state.perfil:
     if st.button("🤖 Generar explicación con IA"):
         with st.spinner("Generando explicación adaptada..."):
             try:
-                respuesta = explicar_informe(texto_extraido, st.session_state.perfil)
+                respuesta = explicar_informe(st.session_state.texto_extraido, st.session_state.perfil)
                 st.session_state.respuesta_generada = respuesta
                 st.success("✅ Interpretación generada")
                 st.write(respuesta)
                 st.session_state.historial.append({
                     "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "texto": texto_extraido,
+                    "texto": st.session_state.texto_extraido,
                     "resultado": respuesta
                 })
                 guardar_datos_usuario()
             except Exception as e:
                 st.error(f"❌ Error al generar la interpretación: {e}")
 
-# Historial de informes
 if st.session_state.historial:
     st.markdown("### 📜 Historial de informes")
-
     for i, item in enumerate(st.session_state.historial[::-1], 1):
         with st.expander(f"📄 Informe #{i} – {item['fecha']}"):
             st.markdown("**📝 Texto original del informe:**", unsafe_allow_html=True)
@@ -229,7 +185,6 @@ if st.session_state.historial:
         st.success("Historial eliminado.")
         st.rerun()
 
-# Exportación a PDF sin gráfico
 if st.session_state.respuesta_generada:
     pdf = FPDF()
     pdf.add_page()
@@ -246,11 +201,12 @@ if st.session_state.respuesta_generada:
     with open(nombre, "rb") as f:
         st.download_button("📄 Descargar como PDF", data=f, file_name=nombre, mime="application/pdf")
 
-# Reinicio de app
 st.divider()
 if st.button("🔄 Nuevo análisis"):
     st.session_state.perfil = None
     st.session_state.respuesta_generada = ""
+    st.session_state.texto_extraido = ""
     guardar_datos_usuario()
     st.rerun()
+
 
