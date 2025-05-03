@@ -1,5 +1,7 @@
 streamlit
-pytesseract
+easyocr
+numpy
 Pillow
 openai
 fpdf
+
