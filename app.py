@@ -10,13 +10,12 @@ import os
 import json
 
 from utils_ai_API import explicar_informe
-from utils_truncado import truncar_texto_por_tokens  # ✅ NUEVO
 from reproducir_audio import generar_audio
 
 DATA_DIR = "usuarios_datos"
 os.makedirs(DATA_DIR, exist_ok=True)
 
-st.set_page_config(page_title="Intérprete Médico Automático", page_icon="🧫", layout="wide")
+st.set_page_config(page_title="Intérprete Médico Automático", page_icon="🧬", layout="wide")
 
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
@@ -170,11 +169,11 @@ if st.session_state.texto_extraido and st.session_state.perfil:
     if st.button("🤖 Generar explicación con IA"):
         with st.spinner("Generando explicación adaptada..."):
             try:
-                texto_limitado = truncar_texto_por_tokens(st.session_state.texto_extraido, max_tokens=3000)
-                respuesta = explicar_informe(texto_limitado, st.session_state.perfil)
+                respuesta = explicar_informe(st.session_state.texto_extraido, st.session_state.perfil)
                 st.session_state.respuesta_generada = respuesta
                 st.success("✅ Interpretación generada")
 
+                # 🔄 Añadir al historial
                 nuevo_registro = {
                     "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
                     "texto": st.session_state.texto_extraido,
@@ -189,6 +188,7 @@ if st.session_state.texto_extraido and st.session_state.perfil:
 if st.session_state.respuesta_generada:
     st.write(st.session_state.respuesta_generada)
 
+    # 🎷 Reproducir audio si hay explicación generada
     st.subheader("🔊 Escuchar explicación")
     if st.button("🎷 Escuchar explicación"):
         audio_bytes = generar_audio(st.session_state.respuesta_generada, lang="es")
