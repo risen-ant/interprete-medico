@@ -1,4 +1,4 @@
-# app.py — interfaz visual con EasyOCR + audio con gTTS + login seguro
+# app.py — interfaz visual
 
 import streamlit as st
 from PIL import Image
@@ -206,11 +206,34 @@ if st.session_state.historial:
             st.code(item["texto"])
             st.markdown("**Resultado generado:**")
             st.write(item["resultado"])
+
+            # Botón para descargar informe como PDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.multi_cell(0, 10, f"Informe generado el {item['fecha']}
+")
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "Resultado personalizado:", ln=True)
+            pdf.set_font("Arial", size=12)
+            pdf.multi_cell(0, 10, item["resultado"].encode('latin-1', 'replace').decode('latin-1'))
+
+            pdf_filename = f"informe_{i}_{item['fecha'].replace(':', '-').replace('/', '-')}.pdf"
+            pdf.output(pdf_filename)
+
+            with open(pdf_filename, "rb") as f:
+                st.download_button(
+                    label="📄 Descargar este informe como PDF",
+                    data=f,
+                    file_name=pdf_filename,
+                    mime="application/pdf"
+                )
     if st.button("🗑️ Borrar historial"):
         st.session_state.historial = []
         guardar_datos_usuario()
         st.success("Historial eliminado.")
         st.rerun()
+
 
 
 
