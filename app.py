@@ -140,6 +140,12 @@ if archivos:
     texto_total = ""
     col1, col2 = st.columns([1, 2])
 
+    # ✅ Paso 2.1: Limitar el número de archivos procesados
+    MAX_ARCHIVOS = 3
+    if len(archivos) > MAX_ARCHIVOS:
+        st.warning(f"⚠️ Solo se procesarán los primeros {MAX_ARCHIVOS} archivos por motivos de rendimiento.")
+        archivos = archivos[:MAX_ARCHIVOS]
+
     # ✅ Paso 1: Inicializar EasyOCR una sola vez
     with st.spinner("Inicializando modelo OCR..."):
         try:
@@ -151,27 +157,44 @@ if archivos:
     for archivo in archivos:
         if archivo.type.startswith("image"):
             imagen = Image.open(archivo)
+
+            # ✅ Paso 2.2: Redimensionar imágenes grandes
+            MAX_PIXELS = 2_000_000  # 2 megapíxeles
+            if imagen.width * imagen.height > MAX_PIXELS:
+                imagen.thumbnail((1600, 1600))
+                st.info(f"📐 Imagen redimensionada por ser demasiado grande: {archivo.name}")
+
             with col1:
                 st.image(imagen, caption=f"🖼 Imagen: {archivo.name}", use_container_width=True)
+
             with st.spinner(f"🔍 Extrayendo texto de {archivo.name}..."):
                 try:
                     resultado = reader.readtext(np.array(imagen), detail=0)
                     texto = "\n".join(resultado)
                     texto_total += f"\n\n--- Texto extraído de {archivo.name} ---\n{texto}"
+                except RuntimeError as e:
+                    st.error("❌ Error crítico de memoria procesando la imagen. Intenta con una imagen más pequeña.")
+                    continue
                 except Exception as e:
                     st.error(f"❌ Error procesando imagen {archivo.name}: {e}")
                     continue
+
         elif archivo.type == "text/plain":
-            texto = archivo.read().decode("utf-8")
-            texto_total += f"\n\n--- Contenido de {archivo.name} ---\n{texto}"
-            with col1:
-                st.success(f"📄 Archivo de texto cargado: {archivo.name}")
+            try:
+                texto = archivo.read().decode("utf-8")
+                texto_total += f"\n\n--- Contenido de {archivo.name} ---\n{texto}"
+                with col1:
+                    st.success(f"📄 Archivo de texto cargado: {archivo.name}")
+            except Exception as e:
+                st.error(f"❌ No se pudo leer el archivo {archivo.name}: {e}")
+                continue
 
     st.session_state.texto_extraido = texto_total.strip()
 
     with col2:
         st.subheader("📜 Texto combinado extraído:")
         st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=400)
+
 
 
 st.divider()
