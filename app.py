@@ -11,7 +11,6 @@ import json
 
 from utils_ai_API import explicar_informe
 from reproducir_audio import generar_audio
-from preprocesado import preprocess_image  # 🔧 MODIFICADO: Importación añadida
 
 DATA_DIR = "usuarios_datos"
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -143,19 +142,14 @@ if archivos:
 
     for archivo in archivos:
         if archivo.type.startswith("image"):
-            imagen_original = Image.open(archivo)
-            imagen_preprocesada = preprocess_image(imagen_original)  # 🔧 MODIFICADO: Preprocesado
-
+            imagen = Image.open(archivo)
             with col1:
-                st.image(imagen_original, caption=f"🖼 Imagen original: {archivo.name}", use_container_width=True)
-                st.image(imagen_preprocesada, caption="🧪 Imagen preprocesada (modo escáner)", use_container_width=True)
-
-            with st.spinner(f"🔍 Extrayendo texto preprocesado de {archivo.name}..."):
+                st.image(imagen, caption=f"🖼 Imagen: {archivo.name}", use_container_width=True)
+            with st.spinner(f"🔍 Extrayendo texto de {archivo.name}..."):
                 reader = easyocr.Reader(["es"], gpu=False)
-                resultado = reader.readtext(np.array(imagen_preprocesada), detail=0)
+                resultado = reader.readtext(np.array(imagen), detail=0)
                 texto = "\n".join(resultado)
                 texto_total += f"\n\n--- Texto extraído de {archivo.name} ---\n{texto}"
-
         elif archivo.type == "text/plain":
             texto = archivo.read().decode("utf-8")
             texto_total += f"\n\n--- Contenido de {archivo.name} ---\n{texto}"
@@ -179,6 +173,7 @@ if st.session_state.texto_extraido and st.session_state.perfil:
                 st.session_state.respuesta_generada = respuesta
                 st.success("✅ Interpretación generada")
 
+                # 🔄 Añadir al historial
                 nuevo_registro = {
                     "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
                     "texto": st.session_state.texto_extraido,
@@ -193,6 +188,7 @@ if st.session_state.texto_extraido and st.session_state.perfil:
 if st.session_state.respuesta_generada:
     st.write(st.session_state.respuesta_generada)
 
+    # 🎷 Reproducir audio si hay explicación generada
     st.subheader("🔊 Escuchar explicación")
     if st.button("🎷 Escuchar explicación"):
         audio_bytes = generar_audio(st.session_state.respuesta_generada, lang="es")
