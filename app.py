@@ -211,8 +211,8 @@ if st.session_state.historial:
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", size=12)
-            pdf.multi_cell(0, 10, f"Informe generado el {item['fecha']}
-")
+            pdf.multi_cell(0, 10, f"Informe generado el {item['fecha']}\n")
+
             pdf.set_font("Arial", "B", 12)
             pdf.cell(0, 10, "Resultado personalizado:", ln=True)
             pdf.set_font("Arial", size=12)
