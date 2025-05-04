@@ -11,6 +11,7 @@ import json
 
 from utils_ai_API import explicar_informe
 from reproducir_audio import generar_audio
+from preprocesado import preprocess_image  # 🔧 MODIFICADO: Importación añadida
 
 DATA_DIR = "usuarios_datos"
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -104,7 +105,7 @@ if st.session_state.perfil:
         for k, v in st.session_state.perfil.items():
             st.markdown(f"**{k.capitalize()}**: {v}")
 
-st.subheader("1⃣️ Define tu perfil")
+st.subheader("1️⃣ Define tu perfil")
 with st.form("perfil_usuario"):
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -128,7 +129,7 @@ with st.form("perfil_usuario"):
         st.success("Perfil guardado correctamente ✅")
 
 st.divider()
-st.subheader("2⃣️ Sube tu informe (imagen o texto)")
+st.subheader("2️⃣ Sube tu informe (imagen o texto)")
 archivos = st.file_uploader(
     "Selecciona uno o varios archivos (.png, .jpg, .jpeg, .txt)",
     type=["png", "jpg", "jpeg", "txt"],
@@ -142,14 +143,19 @@ if archivos:
 
     for archivo in archivos:
         if archivo.type.startswith("image"):
-            imagen = Image.open(archivo)
+            imagen_original = Image.open(archivo)
+            imagen_preprocesada = preprocess_image(imagen_original)  # 🔧 MODIFICADO: Preprocesado
+
             with col1:
-                st.image(imagen, caption=f"🖼 Imagen: {archivo.name}", use_container_width=True)
-            with st.spinner(f"🔍 Extrayendo texto de {archivo.name}..."):
+                st.image(imagen_original, caption=f"🖼 Imagen original: {archivo.name}", use_container_width=True)
+                st.image(imagen_preprocesada, caption="🧪 Imagen preprocesada (modo escáner)", use_container_width=True)
+
+            with st.spinner(f"🔍 Extrayendo texto preprocesado de {archivo.name}..."):
                 reader = easyocr.Reader(["es"], gpu=False)
-                resultado = reader.readtext(np.array(imagen), detail=0)
+                resultado = reader.readtext(np.array(imagen_preprocesada), detail=0)
                 texto = "\n".join(resultado)
                 texto_total += f"\n\n--- Texto extraído de {archivo.name} ---\n{texto}"
+
         elif archivo.type == "text/plain":
             texto = archivo.read().decode("utf-8")
             texto_total += f"\n\n--- Contenido de {archivo.name} ---\n{texto}"
@@ -163,7 +169,7 @@ if archivos:
         st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=400)
 
 st.divider()
-st.subheader("3⃣️ Interpretación personalizada")
+st.subheader("3️⃣ Interpretación personalizada")
 
 if st.session_state.texto_extraido and st.session_state.perfil:
     if st.button("🤖 Generar explicación con IA"):
@@ -173,7 +179,6 @@ if st.session_state.texto_extraido and st.session_state.perfil:
                 st.session_state.respuesta_generada = respuesta
                 st.success("✅ Interpretación generada")
 
-                # 🔄 Añadir al historial
                 nuevo_registro = {
                     "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
                     "texto": st.session_state.texto_extraido,
@@ -188,7 +193,6 @@ if st.session_state.texto_extraido and st.session_state.perfil:
 if st.session_state.respuesta_generada:
     st.write(st.session_state.respuesta_generada)
 
-    # 🎷 Reproducir audio si hay explicación generada
     st.subheader("🔊 Escuchar explicación")
     if st.button("🎷 Escuchar explicación"):
         audio_bytes = generar_audio(st.session_state.respuesta_generada, lang="es")
@@ -231,6 +235,7 @@ if st.button("🔄 Nuevo análisis"):
         if key in st.session_state:
             del st.session_state[key]
     st.session_state["upload_key"] = str(datetime.now())
+
 
 
 
