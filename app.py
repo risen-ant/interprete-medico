@@ -140,16 +140,27 @@ if archivos:
     texto_total = ""
     col1, col2 = st.columns([1, 2])
 
+    # ✅ Paso 1: Inicializar EasyOCR una sola vez
+    with st.spinner("Inicializando modelo OCR..."):
+        try:
+            reader = easyocr.Reader(["es"], gpu=False)
+        except Exception as e:
+            st.error(f"❌ Error al cargar el modelo OCR: {e}")
+            st.stop()
+
     for archivo in archivos:
         if archivo.type.startswith("image"):
             imagen = Image.open(archivo)
             with col1:
                 st.image(imagen, caption=f"🖼 Imagen: {archivo.name}", use_container_width=True)
             with st.spinner(f"🔍 Extrayendo texto de {archivo.name}..."):
-                reader = easyocr.Reader(["es"], gpu=False)
-                resultado = reader.readtext(np.array(imagen), detail=0)
-                texto = "\n".join(resultado)
-                texto_total += f"\n\n--- Texto extraído de {archivo.name} ---\n{texto}"
+                try:
+                    resultado = reader.readtext(np.array(imagen), detail=0)
+                    texto = "\n".join(resultado)
+                    texto_total += f"\n\n--- Texto extraído de {archivo.name} ---\n{texto}"
+                except Exception as e:
+                    st.error(f"❌ Error procesando imagen {archivo.name}: {e}")
+                    continue
         elif archivo.type == "text/plain":
             texto = archivo.read().decode("utf-8")
             texto_total += f"\n\n--- Contenido de {archivo.name} ---\n{texto}"
@@ -161,6 +172,7 @@ if archivos:
     with col2:
         st.subheader("📜 Texto combinado extraído:")
         st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=400)
+
 
 st.divider()
 st.subheader("3️⃣ Interpretación personalizada")
