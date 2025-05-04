@@ -7,3 +7,4 @@ fpdf
 gTTS
 torch
 opencv-python-headless
+tiktoken
