@@ -25,6 +25,8 @@ def construir_prompt_personalizado(texto_informe: str, perfil: dict) -> str:
 
     if edad == "≥65":
         instrucciones.append("Ten en cuenta que es una persona mayor. Prioriza explicaciones claras y riesgos comunes.")
+    elif edad == "<18":
+        instrucciones.append("Ten en cuenta que es una persona joven. Prioriza lenguaje más callejero y de jóvenes, pero sin entrar en lo vulgar.")
 
     if estudios == "Estudios/experiencia sanitaria":
         instrucciones.append("La persona tiene conocimientos sanitarios, puedes profundizar en los aspectos técnicos.")
