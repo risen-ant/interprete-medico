@@ -17,7 +17,7 @@ def construir_prompt_personalizado(texto_informe: str, perfil: dict) -> str:
     instrucciones = []
 
     if detalle == "Muy simple":
-        instrucciones.append("Usa lenguaje muy sencillo y cotidiano. Evita términos técnicos.")
+        instrucciones.append("Usa lenguaje muy sencillo y cotidiano. Evita términos técnicos. Haz una analogía o comparación con algo cotidiano.")
     elif detalle == "Intermedio":
         instrucciones.append("Usa lenguaje accesible pero incluye definiciones breves de conceptos médicos.")
     elif detalle == "Técnico":
