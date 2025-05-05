@@ -133,42 +133,53 @@ with st.form("perfil_usuario"):
 # 2️⃣ Subida de archivo y OCR
 st.divider()
 st.subheader("2️⃣ Sube tu informe (imagen o texto)")
-archivos = st.file_uploader("Selecciona uno o varios archivos (.png, .jpg, .jpeg, .txt)",
-                             type=["png", "jpg", "jpeg", "txt"],
-                             accept_multiple_files=True)
 
-if archivos:
-    texto_total = ""
-    col1, col2 = st.columns([1, 2])
+# Solo si no hay texto extraído ya guardado
+if not st.session_state.texto_extraido:
+    archivos = st.file_uploader("Selecciona uno o varios archivos (.png, .jpg, .jpeg, .txt)",
+                                 type=["png", "jpg", "jpeg", "txt"],
+                                 accept_multiple_files=True)
+    if archivos:
+        texto_total = ""
+        col1, col2 = st.columns([1, 2])
 
-    with st.spinner("Inicializando modelo OCR..."):
-        reader = easyocr.Reader(["es"], gpu=False)
+        with st.spinner("Inicializando modelo OCR..."):
+            reader = easyocr.Reader(["es"], gpu=False)
 
-    for archivo in archivos[:3]:
-        if archivo.type.startswith("image"):
-            imagen = Image.open(archivo)
-            if imagen.width * imagen.height > 2_000_000:
-                imagen.thumbnail((1600, 1600))
-                st.info(f"📐 Imagen redimensionada: {archivo.name}")
-            with col1:
-                st.image(imagen, caption=archivo.name, use_container_width=True)
-            with st.spinner(f"Procesando {archivo.name}..."):
-                try:
-                    resultado = reader.readtext(np.array(imagen), detail=0)
-                    texto = "\n".join(resultado)
-                    texto_total += f"\n\n--- Texto extraído de {archivo.name} ---\n{texto}"
-                except Exception as e:
-                    st.error(f"Error OCR: {e}")
-        elif archivo.type == "text/plain":
-            texto = archivo.read().decode("utf-8")
-            texto_total += f"\n\n--- Contenido de {archivo.name} ---\n{texto}"
-            with col1:
-                st.success(f"📄 Cargado: {archivo.name}")
+        for archivo in archivos[:3]:
+            if archivo.type.startswith("image"):
+                imagen = Image.open(archivo)
+                if imagen.width * imagen.height > 2_000_000:
+                    imagen.thumbnail((1600, 1600))
+                    st.info(f"📐 Imagen redimensionada: {archivo.name}")
+                with col1:
+                    st.image(imagen, caption=archivo.name, use_container_width=True)
+                with st.spinner(f"Procesando {archivo.name}..."):
+                    try:
+                        resultado = reader.readtext(np.array(imagen), detail=0)
+                        texto = "\n".join(resultado)
+                        texto_total += f"\n\n--- Texto extraído de {archivo.name} ---\n{texto}"
+                    except Exception as e:
+                        st.error(f"Error OCR: {e}")
+            elif archivo.type == "text/plain":
+                texto = archivo.read().decode("utf-8")
+                texto_total += f"\n\n--- Contenido de {archivo.name} ---\n{texto}"
+                with col1:
+                    st.success(f"📄 Cargado: {archivo.name}")
 
-    st.session_state.texto_extraido = texto_total.strip()
-    with col2:
-        st.subheader("📜 Texto extraído:")
-        st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=400)
+        st.session_state.texto_extraido = texto_total.strip()
+        with col2:
+            st.subheader("📜 Texto extraído:")
+            st.text_area("Resultado OCR / Texto leído:", value=st.session_state.texto_extraido, height=400)
+
+else:
+    st.success("✅ Ya se ha procesado un informe.")
+    st.text_area("📜 Texto extraído previamente:", value=st.session_state.texto_extraido, height=400)
+    if st.button("🗑️ Borrar texto cargado"):
+        st.session_state.texto_extraido = ""
+        st.session_state.respuesta_generada = ""
+        st.rerun()
+
 
 # 3️⃣ Interpretación con IA
 st.divider()
